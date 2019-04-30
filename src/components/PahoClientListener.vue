@@ -7,74 +7,62 @@
     <div class="toolbar">
       <button :disabled="connected" @click="handleConnect">连接</button>
       <button :disabled="!connected" @click="handleDisconnect">断开</button>
-      <button :disabled="!connected || send" @click="handleStartSend">发送</button>
-      <button :disabled="!connected || !send" @click="handleStopSend">停止</button>
     </div>
     <textarea class="msg" :value="message"></textarea>
   </div>
 </template>
 
 <script>
-import mqtt from 'mqtt';
-
 export default {
-  name: 'MqttClientTalker',
+  name: 'PahoClientListener',
   data: () => ({
-    clientId: 'talker',
+    clientId: 'listener',
     connected: false,
     message: '',
-    send: false,
   }),
   client: null,
-  timer: null,
   mounted() {
+    // Create a client instance
+    this.client = new Paho.Client('localhost', 3333, this.clientId);
+    this.client.onConnectionLost = this.onConnectionLost;
+    this.client.onMessageArrived = this.onMessageArrived;
   },
   destroyed() {
-    clearInterval(this.timer);
-    this.client.end();
+    this.client.disconnect();
   },
   methods: {
     handleConnect() {
       this.log('连接服务器...');
-      this.client = mqtt.connect('ws://localhost', {
-        port: 3333,
-        clientId: this.clientId,
-        clean: false,
+      this.client.connect({
+        cleanSession: false,
+        onSuccess: this.onConnectSuccess,
+        onFailure: this.onConnectFailure,
       });
-      this.client.on('connect', this.onConnectSuccess);
-      this.client.on('close', this.onConnectionLost);
+
+      this.client.subscribe('MqttDemo');
+      this.log('订阅topic:MqttDemo');
     },
     handleDisconnect() {
+      this.client.unsubscribe('MqttDemo');
+      this.log('取消订阅topic:MqttDemo');
+
+      this.client.disconnect();
       this.log('断开服务器连接...');
-      this.handleStopSend();
-      this.client.end();
-    },
-    handleStartSend() {
-      this.send = true;
-      this.timer = setInterval(() => {
-        const message = `[${new Date().toISOString()}]Hello!`;
-        this.client.publish('MqttDemo', message, {
-          qos: 1,
-        });
-        this.log(message);
-      }, 1000);
-    },
-    handleStopSend() {
-      this.send = false;
-      clearInterval(this.timer);
     },
     onConnectSuccess() {
       this.log('已连接到服务器');
       this.connected = true;
     },
-    onConnectFailure(res) {
-      console.log(res);
+    onConnectFailure() {
       this.log('连接服务器失败');
       this.connected = false;
     },
-    onConnectionLost() {
-      this.log('与服务器的连接丢失');
+    onConnectionLost(res) {
+      this.log(`与服务器的连接丢失:${res.errorMessage}`);
       this.connected = false;
+    },
+    onMessageArrived(msg) {
+      this.log(`收到消息:${msg.payloadString}'`);
     },
     log(msg) {
       this.message += `${msg} \n`;

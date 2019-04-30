@@ -15,10 +15,8 @@
 </template>
 
 <script>
-import mqtt from 'mqtt';
-
 export default {
-  name: 'MqttClientTalker',
+  name: 'PahoClientTalker',
   data: () => ({
     clientId: 'talker',
     connected: false,
@@ -28,35 +26,37 @@ export default {
   client: null,
   timer: null,
   mounted() {
+    // Create a client instance
+    this.client = new Paho.Client('localhost', 3333, this.clientId);
+    this.client.onConnectionLost = this.onConnectionLost;
+    this.client.onMessageArrived = this.onMessageArrived;
   },
   destroyed() {
     clearInterval(this.timer);
-    this.client.end();
+    this.client.disconnect();
   },
   methods: {
     handleConnect() {
       this.log('连接服务器...');
-      this.client = mqtt.connect('ws://localhost', {
-        port: 3333,
-        clientId: this.clientId,
-        clean: false,
+      this.client.connect({
+        cleanSession: false,
+        onSuccess: this.onConnectSuccess,
+        onFailure: this.onConnectFailure,
       });
-      this.client.on('connect', this.onConnectSuccess);
-      this.client.on('close', this.onConnectionLost);
     },
     handleDisconnect() {
       this.log('断开服务器连接...');
       this.handleStopSend();
-      this.client.end();
+      this.client.disconnect();
     },
     handleStartSend() {
       this.send = true;
       this.timer = setInterval(() => {
-        const message = `[${new Date().toISOString()}]Hello!`;
-        this.client.publish('MqttDemo', message, {
-          qos: 1,
-        });
-        this.log(message);
+        const message = new Paho.Message(`[${new Date().toISOString()}]Hello!`);
+        message.destinationName = 'MqttDemo';
+        message.qos = 1;
+        this.client.send(message);
+        this.log(message.payloadString);
       }, 1000);
     },
     handleStopSend() {
@@ -72,9 +72,12 @@ export default {
       this.log('连接服务器失败');
       this.connected = false;
     },
-    onConnectionLost() {
-      this.log('与服务器的连接丢失');
+    onConnectionLost(res) {
+      this.log(`与服务器的连接丢失:${res.errorMessage}`);
       this.connected = false;
+    },
+    onMessageArrived(msg) {
+      this.log(`收到消息:${msg}'`);
     },
     log(msg) {
       this.message += `${msg} \n`;

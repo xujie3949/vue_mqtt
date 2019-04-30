@@ -2,22 +2,22 @@
   <div class="container">
     <div class="title">MQTT消息推送演示</div>
     <div class="content">
-      <PahoClientTalker></PahoClientTalker>
-      <PahoClientListener></PahoClientListener>
+      <MqttClientTalker></MqttClientTalker>
+      <MqttClientListener></MqttClientListener>
     </div>
   </div>
 </template>
 
 <script>
 // @ is an alias to /src
-import PahoClientTalker from '@/components/PahoClientTalker.vue';
-import PahoClientListener from '@/components/PahoClientListener.vue';
+import MqttClientTalker from '@/components/MqttClientTalker.vue';
+import MqttClientListener from '@/components/MqttClientListener.vue';
 
 export default {
   name: 'home',
   components: {
-    PahoClientTalker,
-    PahoClientListener,
+    MqttClientTalker,
+    MqttClientListener,
   },
 };
 </script>

@@ -1,10 +1,19 @@
-const mosca = require('mosca')
-
-const ascoltatore = {};
+const mosca = require('mosca');
 
 const settings = {
   port: 1884,
-  backend: ascoltatore,
+  // backend: {
+  //   type: 'zmq',
+  //   json: false,
+  //   zmq: require('zmq'),
+  //   port: 'tcp://127.0.0.1:33333',
+  //   controlPort: 'tcp://127.0.0.1:33334',
+  //   delay: 5,
+  // },
+  persistence: {
+    factory: mosca.persistence.Mongo,
+    url: 'mongodb://127.0.0.1:27017/?gssapiServiceName=mongodb',
+  },
   http: {
     port: 3333,
     bundle: true,
